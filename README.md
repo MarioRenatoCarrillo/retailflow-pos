@@ -1,6 +1,6 @@
 ## AWS ECS Fargate – CloudWatch Logs Demo
 
-![ECS CloudWatch Logs Demo](docs/ecs-cloudwatch-demo.png)
+![ECS CloudWatch Logs Demo](ecs-cloudwatch-demo.png)
 
 .
 
@@ -147,3 +147,4 @@ CI/CD with GitHub Actions
 Terraform / IaC
 
 Metrics via CloudWatch dashboards
+
