@@ -1,3 +1,6 @@
+import argparse
+import sys
+import os
 import csv
 import sqlite3
 from dataclasses import dataclass
@@ -359,16 +362,60 @@ class POSApp:
                 break
             else:
                 print("Invalid option.")
+    
+    def demo(self) -> None:
+        """Non-interactive demo for ECS/CloudWatch. No input() calls."""
+        print("=== RETAILFLOW POS | DEMO MODE ===")
+
+        sample = list(self.inventory.values())[:3]
+        print(f"Inventory sample count: {len(sample)}")
+        for it in sample:
+            print(f"- {it.upc} | {it.description} | ${it.unit_price:.2f} | on_hand={it.on_hand}")
+
+        first = list(self.inventory.values())[0]
+        qty = 1
+        if first.on_hand <= 0:
+            print("Demo cannot run: first item out of stock.")
+            return
+
+        line = SaleLine(first.upc, first.description, first.unit_price, qty)
+        total = self.calc_total([line])
+        cash = total + 1.00
+        change = cash - total
+
+        self.inventory[first.upc].update_on_hand(-qty)
+        receipt_no = self.sales_store.create_receipt([line])
+        self.save_inventory()
+
+        print(f"SALE: {qty} x {first.description} | total=${total:.2f} | cash=${cash:.2f} | change=${change:.2f}")
+        print(f"RECEIPT: {receipt_no}")
+
+        self.inventory[first.upc].update_on_hand(1)
+        self.sales_store.update_line_qty(receipt_no, first.upc, 0)
+        self.save_inventory()
+
+        print(f"RETURN: 1 x {first.description} | receipt={receipt_no}")
+        print("=== DEMO COMPLETE ===")
 
 
 def main() -> None:
-    app = POSApp(
-        users_csv="data/UsersData.csv",
-        inventory_csv="data/RetailStoreItemData.txt",
-        db_path="data/pos.db"
-    )
-    app.run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--demo", action="store_true", help="Run non-interactive demo and exit")
+    parser.add_argument("--users", default="data/UsersData.csv")
+    parser.add_argument("--inventory", default="data/RetailStoreItemData.txt")
+    parser.add_argument("--db", default="data/pos.db")
+    args = parser.parse_args()
 
+    app = POSApp(users_csv=args.users, inventory_csv=args.inventory, db_path=args.db)
+
+    if args.demo:
+        print("RetailFlow POS demo starting...")
+        print("ARGV:", sys.argv)  # <- this proves ECS passed --demo
+        app.demo()
+        print("Demo complete. Exiting normally.")
+        return
+
+    app.run()
 
 if __name__ == "__main__":
     main()
